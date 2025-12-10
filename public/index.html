@@ -65,10 +65,10 @@
         
         .raise-btn { padding: 15px; font-size: 16px; background: #333; color: white; border: 1px solid #555; }
         .raise-btn:active { background: var(--accent); color: black; }
-        .balance-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; }
+        
+        .balance-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 12px 0; font-size: 15px; }
         .balance-pos { color: var(--success); font-weight: bold; }
         .balance-neg { color: var(--danger); font-weight: bold; }
-        
         .move-arrows button { background: #444; color: #aaa; border: none; font-size: 12px; padding: 4px 8px; margin: 0 1px; cursor: pointer; border-radius: 3px; }
     </style>
 </head>
@@ -90,7 +90,7 @@
                 <div class="my-chips">€ <span id="display-balance">0.00</span></div>
             </div>
             <div class="toolbar">
-                <button class="btn icon-btn" onclick="openBalance()">📊</button>
+                <button class="btn icon-btn" onclick="toggleBalance()">📊</button>
                 <button id="admin-btn" class="btn icon-btn hidden" onclick="toggleAdmin()">👑</button>
                 <button class="btn exit-btn" onclick="leaveGame()">ESCI</button>
             </div>
@@ -143,10 +143,14 @@
     <!-- MENU BILANCIO -->
     <div id="balance-overlay" class="overlay hidden">
         <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
-            <h2 style="margin:0; color:white">📊 Bilancio</h2>
+            <h2 style="margin:0; color:white">📊 Bilancio Netto</h2>
             <button class="btn" style="background:transparent; color:white; font-size:24px" onclick="toggleBalance()">✕</button>
         </div>
-        <div style="margin-bottom:20px; color:#aaa; font-size:12px;">Verde = Devi Ricevere | Rosso = Devi Dare</div>
+        <div style="margin-bottom:20px; color:#aaa; font-size:12px; line-height:1.4">
+            Differenza tra soldi messi (Buy-In) e fiches attuali.<br>
+            <span style="color:var(--success)">VERDE</span> = Stai vincendo (Devi Ricevere)<br>
+            <span style="color:var(--danger)">ROSSO</span> = Stai perdendo (Devi Dare)
+        </div>
         <div id="balance-list"></div>
     </div>
 
@@ -167,10 +171,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let myToken = localStorage.getItem('pokerTokenV7'); 
+        let myToken = localStorage.getItem('pokerTokenV8'); 
         if(!myToken) {
             myToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            localStorage.setItem('pokerTokenV7', myToken);
+            localStorage.setItem('pokerTokenV8', myToken);
         }
         let myRoom = null;
         let currentMaxBet = 0;
@@ -229,7 +233,7 @@
             }
 
             room.players.forEach(p => {
-                // Main Grid
+                // Card UI
                 const el = document.createElement('div');
                 el.className = "player-card " + (p.token === activePlayer?.token ? 'active-turn ' : '') + (p.folded ? 'folded' : '');
                 let dealerHtml = (p.token === room.dealerToken) ? '<div class="dealer-badge">D</div>' : '';
@@ -240,7 +244,7 @@
                 `;
                 grid.appendChild(el);
 
-                // Admin List with Move Arrows
+                // Admin UI
                 const li = document.createElement('div');
                 li.className = 'list-item';
                 li.innerHTML = `
@@ -259,7 +263,7 @@
                 adminList.appendChild(li);
             });
 
-            // Action Bar logic
+            // Action Bar
             const actionBar = document.getElementById('action-bar');
             const btnCheckCall = document.getElementById('btn-check-call');
             if(isMyTurn) {
@@ -289,9 +293,9 @@
 
         function doAction(type) { socket.emit('playerAction', { roomCode: myRoom, action: type }); }
         function leaveGame() {
-            if(confirm("Esci e azzeri il conto?")) {
+            if(confirm("Vuoi uscire dal gioco?")) {
                 socket.emit('leaveGame', { roomCode: myRoom });
-                localStorage.removeItem('pokerTokenV7');
+                localStorage.removeItem('pokerTokenV8');
                 location.reload();
             }
         }
@@ -302,11 +306,14 @@
             socket.emit('playerAction', { roomCode: myRoom, action: 'RAISE', amount: newTotal });
             closeRaiseMenu();
         }
+        
+        // FIX NOME FUNZIONE QUI SOTTO
         function toggleBalance() { 
             const el = document.getElementById('balance-overlay');
             el.classList.toggle('hidden');
             if(!el.classList.contains('hidden')) renderBalance();
         }
+        
         function renderBalance() {
             const list = document.getElementById('balance-list');
             list.innerHTML = '';
