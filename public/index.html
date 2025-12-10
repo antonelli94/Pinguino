@@ -17,46 +17,56 @@
         input { background: #333; border: 1px solid #555; color: white; padding: 15px; width: 80%; margin: 10px 0; border-radius: 8px; font-size: 18px; text-align: center; }
         .btn-start { background: var(--accent); color: black; padding: 15px 40px; font-size: 18px; margin-top: 20px; }
 
-        /* TOP BAR */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: var(--surface); box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; gap: 10px;}
-        .my-chips { font-size: 1.2em; font-weight: bold; color: var(--accent); }
-        .icon-btn { background: #333; color: white; padding: 8px; border-radius: 5px; font-size: 18px; min-width: 40px; }
-        .exit-btn { background: var(--danger); color: white; font-size: 12px; padding: 5px 10px; }
+        /* TOP BAR MOBILE FRIENDLY */
+        .top-bar { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 8px 10px; background: var(--surface); box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; 
+        }
+        .user-info { display: flex; flex-direction: column; line-height: 1.2; }
+        .my-name { font-size: 0.8em; color: #aaa; }
+        .my-chips { font-size: 1.1em; font-weight: bold; color: var(--accent); }
+        
+        .toolbar { display: flex; gap: 6px; }
+        .icon-btn { 
+            background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 16px; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .admin-active { background: var(--accent); color: black; }
+        .exit-btn { background: #333; border: 1px solid var(--danger); color: var(--danger); font-size: 10px; padding: 0 8px; }
 
         /* TABLE */
-        #game-area { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; overflow-y: auto; }
+        #game-area { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 15px; overflow-y: auto; }
         .poker-table-graphic {
-            width: 280px; height: 130px; background: var(--table); border: 8px solid #1b5e20; border-radius: 100px;
+            width: 260px; height: 120px; background: var(--table); border: 6px solid #1b5e20; border-radius: 90px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 15px;
         }
-        .pot-amount { font-size: 2em; font-weight: bold; color: white; }
+        .pot-amount { font-size: 1.8em; font-weight: bold; color: white; }
         
         /* PLAYERS */
-        #players-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 95%; max-width: 400px; padding-bottom: 90px; }
-        .player-card { background: var(--surface); padding: 10px; border-radius: 8px; border-left: 4px solid #555; position: relative; }
-        .player-card.active-turn { background: #263238; border-left-color: var(--accent); box-shadow: 0 0 15px rgba(255, 171, 0, 0.2); transform: scale(1.02); transition: 0.2s; }
+        #players-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; width: 96%; max-width: 400px; padding-bottom: 90px; }
+        .player-card { background: var(--surface); padding: 8px; border-radius: 8px; border-left: 3px solid #555; position: relative; font-size: 14px; }
+        .player-card.active-turn { background: #263238; border-left-color: var(--accent); box-shadow: 0 0 10px rgba(255, 171, 0, 0.2); transform: scale(1.01); transition: 0.2s; }
         .player-card.folded { opacity: 0.5; filter: grayscale(1); }
-        .dealer-badge { position: absolute; top: -5px; right: -5px; background: white; color: black; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .dealer-badge { position: absolute; top: -5px; right: -5px; background: white; color: black; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
 
         /* ACTION BAR */
-        #action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 15px; display: flex; gap: 10px; z-index: 20; box-sizing: border-box; }
-        .btn-game { flex: 1; padding: 15px; font-size: 14px; color: #000; }
+        #action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 10px; display: flex; gap: 8px; z-index: 20; box-sizing: border-box; }
+        .btn-game { flex: 1; padding: 12px; font-size: 13px; color: #000; }
         .btn-fold { background: var(--danger); color: white; }
         .btn-check { background: #2196f3; color: white; }
         .btn-call { background: var(--accent); }
         .btn-raise { background: #4caf50; color: white; }
 
         /* OVERLAYS */
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 50; padding: 20px; box-sizing: border-box; overflow-y: auto; display:flex; flex-direction:column; }
-        .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 50; padding: 15px; box-sizing: border-box; overflow-y: auto; display:flex; flex-direction:column; }
+        .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
         .list-item { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; margin-bottom: 5px; border-radius: 4px; }
-        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 15px 30px; border-radius: 30px; font-size: 1.2em; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 60; text-align:center; min-width: 200px; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 25px; border-radius: 30px; font-size: 1em; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 60; text-align:center; min-width: 200px; }
         
-        .raise-btn { padding: 20px; font-size: 18px; background: #333; color: white; border: 1px solid #555; }
+        .raise-btn { padding: 15px; font-size: 16px; background: #333; color: white; border: 1px solid #555; }
         .raise-btn:active { background: var(--accent); color: black; }
         
-        /* Balance Table */
         .balance-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; }
         .balance-pos { color: var(--success); font-weight: bold; }
         .balance-neg { color: var(--danger); font-weight: bold; }
@@ -75,11 +85,11 @@
     <!-- GIOCO -->
     <div id="game-screen" class="hidden" style="height:100%">
         <div class="top-bar">
-            <div>
-                <div style="font-size:0.8em; color:#aaa" id="display-name">Nome</div>
+            <div class="user-info">
+                <div class="my-name" id="display-name">Nome</div>
                 <div class="my-chips">€ <span id="display-balance">0.00</span></div>
             </div>
-            <div style="display:flex; gap:5px">
+            <div class="toolbar">
                 <button class="btn icon-btn" onclick="openBalance()">📊</button>
                 <button id="admin-btn" class="btn icon-btn hidden" onclick="toggleAdmin()">👑</button>
                 <button class="btn exit-btn" onclick="leaveGame()">ESCI</button>
@@ -88,12 +98,12 @@
 
         <div id="game-area">
             <div class="poker-table-graphic">
-                <div style="font-size:0.8em; color:rgba(255,255,255,0.7)">PIATTO</div>
+                <div style="font-size:0.7em; color:rgba(255,255,255,0.7)">PIATTO</div>
                 <div class="pot-amount">€ <span id="pot-amount">0.00</span></div>
-                <div style="font-size:0.8em; background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:10px; margin-top:5px">Puntata Max: € <span id="current-bet">0.00</span></div>
+                <div style="font-size:0.7em; background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:10px; margin-top:5px">Puntata Max: € <span id="current-bet">0.00</span></div>
             </div>
             
-            <div id="turn-indicator" style="margin-bottom:15px; font-weight:bold; color:var(--accent);">In attesa...</div>
+            <div id="turn-indicator" style="margin-bottom:10px; font-weight:bold; color:var(--accent); font-size:0.9em">In attesa...</div>
             <div id="players-grid"></div>
         </div>
 
@@ -112,34 +122,31 @@
             <button class="btn" style="background:transparent; color:white; font-size:24px" onclick="toggleAdmin()">✕</button>
         </div>
 
-        <h3 style="color:#aaa; font-size:12px;">INIZIA MANO</h3>
+        <h3 style="color:#aaa; font-size:11px;">INIZIA MANO</h3>
         <div class="money-grid">
             <button class="btn raise-btn" style="background:var(--table)" onclick="startRound(0.10)">10¢</button>
             <button class="btn raise-btn" style="background:var(--table)" onclick="startRound(0.20)">20¢</button>
             <button class="btn raise-btn" style="background:var(--table)" onclick="startRound(0.50)">50¢</button>
         </div>
 
-        <h3 style="color:#aaa; font-size:12px;">RICARICA TUTTI</h3>
+        <h3 style="color:#aaa; font-size:11px;">RICARICA TUTTI</h3>
         <div class="money-grid">
             <button class="btn raise-btn" onclick="giveMoneyToAll(1)">+1€</button>
             <button class="btn raise-btn" onclick="giveMoneyToAll(5)">+5€</button>
             <button class="btn raise-btn" style="background:var(--danger)" onclick="resetGame()">RESET</button>
         </div>
 
-        <h3 style="color:#aaa; font-size:12px;">GIOCATORI</h3>
+        <h3 style="color:#aaa; font-size:11px;">GIOCATORI</h3>
         <div id="admin-player-list"></div>
     </div>
 
     <!-- MENU BILANCIO -->
     <div id="balance-overlay" class="overlay hidden">
         <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
-            <h2 style="margin:0; color:white">📊 Bilancio Netto</h2>
+            <h2 style="margin:0; color:white">📊 Bilancio</h2>
             <button class="btn" style="background:transparent; color:white; font-size:24px" onclick="toggleBalance()">✕</button>
         </div>
-        <div style="margin-bottom:20px; color:#aaa; font-size:12px;">
-            Differenza tra soldi messi (Buy-In) e fiches attuali.
-            <br>Verde = Devi ricevere | Rosso = Devi dare
-        </div>
+        <div style="margin-bottom:20px; color:#aaa; font-size:12px;">Verde = Devi Ricevere | Rosso = Devi Dare</div>
         <div id="balance-list"></div>
     </div>
 
@@ -160,10 +167,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let myToken = localStorage.getItem('pokerTokenV5');
+        let myToken = localStorage.getItem('pokerTokenV6'); // Cambio token per pulizia
         if(!myToken) {
             myToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            localStorage.setItem('pokerTokenV5', myToken);
+            localStorage.setItem('pokerTokenV6', myToken);
         }
         let myRoom = null;
         let currentMaxBet = 0;
@@ -183,10 +190,10 @@
 
         socket.on('updateGame', (room) => {
             currentMaxBet = room.currentBet;
-            allPlayers = room.players; // Salviamo per il bilancio
+            allPlayers = room.players;
             const me = room.players.find(p => p.token === myToken);
             
-            // Se sono stato rimosso (ESCI) e il gioco si aggiorna, torno al login
+            // Reload se sono stato espulso/uscito
             if(!me && document.getElementById('game-screen').classList.contains('hidden') === false) {
                  location.reload(); 
             }
@@ -194,7 +201,14 @@
             if(me) {
                 document.getElementById('display-balance').innerText = me.chips.toFixed(2);
                 myBetInRound = me.betInRound;
-                if(me.isAdmin) document.getElementById('admin-btn').classList.remove('hidden');
+                // Gestione Visibilità Tasto Admin
+                const btn = document.getElementById('admin-btn');
+                if(me.isAdmin) {
+                    btn.classList.remove('hidden');
+                    btn.classList.add('admin-active'); // Evidenzia
+                } else {
+                    btn.classList.add('hidden');
+                }
             }
 
             document.getElementById('pot-amount').innerText = room.pot.toFixed(2);
@@ -217,7 +231,7 @@
             }
 
             room.players.forEach(p => {
-                // Card Giocatore
+                // Card
                 const el = document.createElement('div');
                 el.className = "player-card " + (p.token === activePlayer?.token ? 'active-turn ' : '') + (p.folded ? 'folded' : '');
                 let dealerHtml = (p.token === room.dealerToken) ? '<div class="dealer-badge">D</div>' : '';
@@ -228,22 +242,22 @@
                 `;
                 grid.appendChild(el);
 
-                // Admin Lista
+                // Admin
                 const li = document.createElement('div');
                 li.className = 'list-item';
                 li.innerHTML = `
                     <span style="color:white; font-size:14px">${p.username}</span>
                     <div>
-                        <button class="btn" style="background:var(--accent); color:black; font-size:12px; padding:5px 15px; margin-right:5px" onclick="setWinner('${p.token}')">VINCE</button>
-                        <button class="btn" style="background:#444; color:white; padding:5px 10px;" onclick="giveMoney('${p.token}')">+</button>
+                        <button class="btn" style="background:var(--accent); color:black; font-size:11px; padding:5px 10px; margin-right:5px" onclick="setWinner('${p.token}')">VINCE</button>
+                        <button class="btn" style="background:#444; color:white; padding:5px 10px; font-size:11px" onclick="giveMoney('${p.token}')">+</button>
                     </div>
                 `;
                 adminList.appendChild(li);
             });
 
-            // Action Bar logic
             const actionBar = document.getElementById('action-bar');
             const btnCheckCall = document.getElementById('btn-check-call');
+
             if(isMyTurn) {
                 actionBar.classList.remove('hidden');
                 const diff = Math.round((currentMaxBet - myBetInRound) * 100) / 100;
@@ -260,11 +274,7 @@
                 actionBar.classList.add('hidden');
                 closeRaiseMenu();
             }
-            
-            // Se il menu bilancio è aperto, aggiornalo live
-            if(!document.getElementById('balance-overlay').classList.contains('hidden')) {
-                renderBalance();
-            }
+            if(!document.getElementById('balance-overlay').classList.contains('hidden')) renderBalance();
         });
 
         socket.on('toast', (msg) => {
@@ -273,17 +283,14 @@
             setTimeout(() => t.style.opacity = 0, 3000);
         });
 
-        // ACTION UTENTE
         function doAction(type) { socket.emit('playerAction', { roomCode: myRoom, action: type }); }
         function leaveGame() {
-            if(confirm("Vuoi uscire dal gioco? Il tuo conto verrà azzerato.")) {
+            if(confirm("Esci e azzeri il conto?")) {
                 socket.emit('leaveGame', { roomCode: myRoom });
-                localStorage.removeItem('pokerTokenV5'); // Reset token
+                localStorage.removeItem('pokerTokenV6');
                 location.reload();
             }
         }
-
-        // RILANCIO
         function openRaiseMenu() { document.getElementById('raise-overlay').classList.remove('hidden'); }
         function closeRaiseMenu() { document.getElementById('raise-overlay').classList.add('hidden'); }
         function confirmRaise(increment) {
@@ -291,8 +298,6 @@
             socket.emit('playerAction', { roomCode: myRoom, action: 'RAISE', amount: newTotal });
             closeRaiseMenu();
         }
-        
-        // BILANCIO
         function toggleBalance() { 
             const el = document.getElementById('balance-overlay');
             el.classList.toggle('hidden');
@@ -301,31 +306,23 @@
         function renderBalance() {
             const list = document.getElementById('balance-list');
             list.innerHTML = '';
-            
             allPlayers.forEach(p => {
-                // Netto = Chips attuali - Soldi messi
                 const net = p.chips - p.buyInTotal;
                 const cssClass = net >= 0 ? 'balance-pos' : 'balance-neg';
                 const sign = net >= 0 ? '+' : '';
-                
                 const row = document.createElement('div');
                 row.className = 'balance-row';
-                row.innerHTML = `
-                    <span>${p.username}</span>
-                    <span class="${cssClass}">${sign}${net.toFixed(2)} €</span>
-                `;
+                row.innerHTML = `<span>${p.username}</span><span class="${cssClass}">${sign}${net.toFixed(2)} €</span>`;
                 list.appendChild(row);
             });
         }
-        
-        // ADMIN
         function toggleAdmin() { document.getElementById('admin-overlay').classList.toggle('hidden'); }
         function startRound(ante) {
             socket.emit('adminAction', { roomCode: myRoom, type: 'START_ROUND', payload: { ante: parseFloat(ante) }});
             toggleAdmin();
         }
         function setWinner(token) {
-            if(confirm("Ha vinto?")) {
+            if(confirm("Confermi vincitore?")) {
                 socket.emit('adminAction', { roomCode: myRoom, type: 'WINNER', payload: { token }});
                 toggleAdmin();
             }
