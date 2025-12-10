@@ -8,7 +8,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = {};
 
-// Funzione per evitare errori decimali (es. 0.1 + 0.2 = 0.300004)
+// Funzione arrotondamento
 const round = (num) => Math.round(num * 100) / 100;
 
 io.on('connection', (socket) => {
@@ -30,12 +30,15 @@ io.on('connection', (socket) => {
         if(player) {
             player.socketId = socket.id;
             player.username = username;
+            // Se mancava il campo buyInTotal (vecchi utenti), lo setto a 0 o alle chips attuali approssimativamente
+            if(player.buyInTotal === undefined) player.buyInTotal = 0; 
         } else {
             player = {
                 token: token,
                 socketId: socket.id,
                 username: username,
                 chips: 0,
+                buyInTotal: 0, // Quanto ha speso in soldi veri
                 betInRound: 0,
                 folded: false,
                 isAdmin: token === room.adminToken
@@ -71,7 +74,6 @@ io.on('connection', (socket) => {
             }
         }
         else if (action === 'RAISE') {
-            // Amount qui è la cifra TOTALE a cui voglio arrivare
             const raiseTo = parseFloat(amount);
             const diff = round(raiseTo - player.betInRound);
             
@@ -80,22 +82,39 @@ io.on('connection', (socket) => {
                 player.betInRound = round(player.betInRound + diff); 
                 room.pot = round(room.pot + diff); 
                 room.currentBet = raiseTo;
-                
-                // Messaggio intelligente: calcola l'incremento
-                const increment = round(raiseTo - (room.currentBet - diff)); // un po' tricky, ma serve solo per log
                 io.to(roomCode).emit('toast', `${player.username} RILANCIA a ${raiseTo.toFixed(2)}€!`);
             }
         }
 
-        // Calcolo prossimo turno
+        // Passaggio Turno
         let nextIndex = (room.turnIndex + 1) % room.players.length;
         let loop = 0;
-        while(room.players[nextIndex].folded && loop < room.players.length) {
-            nextIndex = (nextIndex + 1) % room.players.length;
-            loop++;
+        if(room.players.length > 0) {
+            while(room.players[nextIndex].folded && loop < room.players.length) {
+                nextIndex = (nextIndex + 1) % room.players.length;
+                loop++;
+            }
+            room.turnIndex = nextIndex;
         }
-        room.turnIndex = nextIndex;
         io.to(roomCode).emit('updateGame', room);
+    });
+
+    socket.on('leaveGame', ({ roomCode }) => {
+        const room = rooms[roomCode];
+        if(!room) return;
+
+        // Trova giocatore
+        const pIndex = room.players.findIndex(p => p.socketId === socket.id);
+        if(pIndex !== -1) {
+            const pName = room.players[pIndex].username;
+            room.players.splice(pIndex, 1); // Rimuovi dalla lista
+            
+            // Gestione crash se era il suo turno
+            if(room.turnIndex >= room.players.length) room.turnIndex = 0;
+            
+            io.to(roomCode).emit('toast', `👋 ${pName} è uscito dal tavolo.`);
+            io.to(roomCode).emit('updateGame', room);
+        }
     });
 
     socket.on('adminAction', ({ roomCode, type, payload }) => {
@@ -111,10 +130,12 @@ io.on('connection', (socket) => {
             const currentDealerIdx = room.players.findIndex(p => p.token === room.dealerToken);
             let nextDealerIdx = (currentDealerIdx + 1) % room.players.length;
             if(currentDealerIdx === -1) nextDealerIdx = 0;
-            room.dealerToken = room.players[nextDealerIdx].token;
-            room.turnIndex = (nextDealerIdx + 1) % room.players.length;
+            if(room.players.length > 0) {
+                room.dealerToken = room.players[nextDealerIdx].token;
+                room.turnIndex = (nextDealerIdx + 1) % room.players.length;
+            }
 
-            // Preleva Ante da tutti
+            // Preleva Ante
             room.players.forEach(p => {
                 p.folded = false; p.betInRound = 0;
                 if(p.chips >= ante) { 
@@ -134,14 +155,26 @@ io.on('connection', (socket) => {
         }
         else if(type === 'ADD_CHIPS') {
             const p = room.players.find(pl => pl.token === payload.token);
-            if(p) p.chips = round(p.chips + payload.amount);
+            if(p) {
+                const val = parseFloat(payload.amount);
+                p.chips = round(p.chips + val);
+                // IMPORTANTE: Se aggiungiamo chips (soldi veri), aumenta il BuyInTotal
+                // Se è negativo (correzione errore), non lo contiamo come buyin
+                if(val > 0) p.buyInTotal = round(p.buyInTotal + val);
+            }
         }
         else if(type === 'ADD_ALL') {
-            room.players.forEach(p => p.chips = round(p.chips + payload.amount));
-            io.to(roomCode).emit('toast', `Ricarica di ${payload.amount}€ per tutti!`);
+            const val = parseFloat(payload.amount);
+            room.players.forEach(p => {
+                p.chips = round(p.chips + val);
+                if(val > 0) p.buyInTotal = round(p.buyInTotal + val);
+            });
+            io.to(roomCode).emit('toast', `Ricarica di ${val}€ per tutti!`);
         }
         else if(type === 'RESET') {
-            room.players.forEach(p => { p.chips = 0; p.betInRound = 0; p.folded = false; });
+            room.players.forEach(p => { 
+                p.chips = 0; p.betInRound = 0; p.folded = false; p.buyInTotal = 0; 
+            });
             room.pot = 0; room.currentBet = 0; room.phase = 'WAITING';
             io.to(roomCode).emit('toast', `⚠️ Tavolo resettato!`);
         }
