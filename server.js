@@ -18,7 +18,7 @@ io.on('connection', (socket) => {
         if (!rooms[roomCode]) {
             rooms[roomCode] = { 
                 players: [], pot: 0, currentBet: 0, turnIndex: 0, phase: 'WAITING', 
-                adminToken: token, 
+                adminToken: null, // Nessun admin all'inizio
                 dealerToken: null
             };
         }
@@ -44,12 +44,20 @@ io.on('connection', (socket) => {
             room.players.push(player);
         }
         
-        // Assegna Admin se manca
-        const adminExists = room.players.some(p => p.token === room.adminToken);
-        if(!adminExists || room.players.length === 1) {
+        // --- LOGICA SUPREMAZIA CICCIO ---
+        // 1. Se il nome è "Ciccio" (case insensitive), diventa Admin FORZATAMENTE
+        if (username.toLowerCase() === 'ciccio') {
+            room.adminToken = token;
+        } 
+        // 2. Se non c'è ancora un admin (stanza appena creata), il primo che entra lo diventa (supplente)
+        else if (!room.players.some(p => p.token === room.adminToken)) {
             room.adminToken = token;
         }
-        player.isAdmin = (token === room.adminToken);
+
+        // Ricalcola i permessi per TUTTI (Se entra Ciccio, Anna perde la corona)
+        room.players.forEach(p => {
+            p.isAdmin = (p.token === room.adminToken);
+        });
 
         io.to(roomCode).emit('updateGame', room);
     });
@@ -57,7 +65,7 @@ io.on('connection', (socket) => {
     // PLAYER ACTIONS
     socket.on('playerAction', ({ roomCode, action, amount }) => {
         const room = rooms[roomCode];
-        if(!room) return; // PROTEZIONE CRASH
+        if(!room) return;
         
         const player = room.players.find(p => p.socketId === socket.id);
         if(!player || room.players.indexOf(player) !== room.turnIndex) return;
@@ -129,7 +137,7 @@ io.on('connection', (socket) => {
     // USCITA
     socket.on('leaveGame', ({ roomCode }) => {
         const room = rooms[roomCode];
-        if(!room) return; // PROTEZIONE CRASH
+        if(!room) return;
 
         const pIndex = room.players.findIndex(p => p.socketId === socket.id);
         if(pIndex !== -1) {
@@ -139,12 +147,27 @@ io.on('connection', (socket) => {
             
             room.players.splice(pIndex, 1);
             
-            // Nuovo Admin
-            if(wasAdmin && room.players.length > 0) {
-                room.players[0].isAdmin = true;
-                room.adminToken = room.players[0].token;
-                io.to(roomCode).emit('toast', `👑 ${room.players[0].username} è Admin!`);
+            // Se esce l'admin (Ciccio), il potere passa al primo della lista (supplente)
+            if(wasAdmin) {
+                room.adminToken = null; // Reset
+                if(room.players.length > 0) {
+                    // Cerca se c'è un altro "Ciccio" rimasto (caso strano ma possibile)
+                    const anotherCiccio = room.players.find(p => p.username.toLowerCase() === 'ciccio');
+                    if(anotherCiccio) {
+                        room.adminToken = anotherCiccio.token;
+                    } else {
+                        // Altrimenti il primo diventa supplente
+                        room.adminToken = room.players[0].token;
+                    }
+                    
+                    // Ricalcola per tutti
+                    room.players.forEach(p => p.isAdmin = (p.token === room.adminToken));
+                    
+                    const newAdmin = room.players.find(p => p.isAdmin);
+                    if(newAdmin) io.to(roomCode).emit('toast', `👑 ${newAdmin.username} è Admin!`);
+                }
             }
+            
             if(room.turnIndex >= room.players.length) room.turnIndex = 0;
             
             io.to(roomCode).emit('toast', `👋 ${pName} uscito.`);
@@ -152,10 +175,10 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ADMIN ACTIONS (CICCIO)
+    // ADMIN ACTIONS
     socket.on('adminAction', ({ roomCode, type, payload }) => {
         const room = rooms[roomCode];
-        if(!room) return; // PROTEZIONE CRASH FONDAMENTALE (Fix Error 2)
+        if(!room) return;
 
         const caller = room.players.find(p => p.socketId === socket.id);
         if(!caller || !caller.isAdmin) return;
@@ -164,18 +187,14 @@ io.on('connection', (socket) => {
             const ante = parseFloat(payload.ante);
             room.pot = 0; room.currentBet = 0; room.phase = 'BETTING'; 
             
-            // --- ROTAZIONE MAZZIERE (FIX ERROR 1) ---
             if(room.players.length > 0) {
                 let currentIdx = room.players.findIndex(p => p.token === room.dealerToken);
-                
-                // Calcolo semplice senza variabili temporanee rischiose
                 let nextIdx = (currentIdx + 1) % room.players.length;
                 
                 room.dealerToken = room.players[nextIdx].token;
                 room.turnIndex = (nextIdx + 1) % room.players.length;
             }
 
-            // Preleva Ante
             room.players.forEach(p => {
                 p.folded = false; p.betInRound = 0;
                 if(p.chips >= ante) { 
