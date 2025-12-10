@@ -17,7 +17,7 @@
         input { background: #333; border: 1px solid #555; color: white; padding: 15px; width: 80%; margin: 10px 0; border-radius: 8px; font-size: 18px; text-align: center; }
         .btn-start { background: var(--accent); color: black; padding: 15px 40px; font-size: 18px; margin-top: 20px; }
 
-        /* TOP BAR MOBILE FRIENDLY */
+        /* TOP BAR */
         .top-bar { 
             display: flex; justify-content: space-between; align-items: center; 
             padding: 8px 10px; background: var(--surface); box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; 
@@ -25,7 +25,6 @@
         .user-info { display: flex; flex-direction: column; line-height: 1.2; }
         .my-name { font-size: 0.8em; color: #aaa; }
         .my-chips { font-size: 1.1em; font-weight: bold; color: var(--accent); }
-        
         .toolbar { display: flex; gap: 6px; }
         .icon-btn { 
             background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 16px; 
@@ -48,7 +47,7 @@
         .player-card { background: var(--surface); padding: 8px; border-radius: 8px; border-left: 3px solid #555; position: relative; font-size: 14px; }
         .player-card.active-turn { background: #263238; border-left-color: var(--accent); box-shadow: 0 0 10px rgba(255, 171, 0, 0.2); transform: scale(1.01); transition: 0.2s; }
         .player-card.folded { opacity: 0.5; filter: grayscale(1); }
-        .dealer-badge { position: absolute; top: -5px; right: -5px; background: white; color: black; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .dealer-badge { position: absolute; top: -5px; right: -5px; background: white; color: black; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 
         /* ACTION BAR */
         #action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 10px; display: flex; gap: 8px; z-index: 20; box-sizing: border-box; }
@@ -61,15 +60,16 @@
         /* OVERLAYS */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 50; padding: 15px; box-sizing: border-box; overflow-y: auto; display:flex; flex-direction:column; }
         .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; margin-bottom: 5px; border-radius: 4px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 8px; margin-bottom: 5px; border-radius: 4px; }
         .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 25px; border-radius: 30px; font-size: 1em; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 60; text-align:center; min-width: 200px; }
         
         .raise-btn { padding: 15px; font-size: 16px; background: #333; color: white; border: 1px solid #555; }
         .raise-btn:active { background: var(--accent); color: black; }
-        
         .balance-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; }
         .balance-pos { color: var(--success); font-weight: bold; }
         .balance-neg { color: var(--danger); font-weight: bold; }
+        
+        .move-arrows button { background: #444; color: #aaa; border: none; font-size: 12px; padding: 4px 8px; margin: 0 1px; cursor: pointer; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -129,15 +129,15 @@
             <button class="btn raise-btn" style="background:var(--table)" onclick="startRound(0.50)">50¢</button>
         </div>
 
-        <h3 style="color:#aaa; font-size:11px;">RICARICA TUTTI</h3>
+        <h3 style="color:#aaa; font-size:11px;">SPOSTA GIOCATORI (Ordina Tavolo)</h3>
+        <div id="admin-player-list"></div>
+
+        <h3 style="color:#aaa; font-size:11px; margin-top:20px">RICARICA TUTTI</h3>
         <div class="money-grid">
             <button class="btn raise-btn" onclick="giveMoneyToAll(1)">+1€</button>
             <button class="btn raise-btn" onclick="giveMoneyToAll(5)">+5€</button>
             <button class="btn raise-btn" style="background:var(--danger)" onclick="resetGame()">RESET</button>
         </div>
-
-        <h3 style="color:#aaa; font-size:11px;">GIOCATORI</h3>
-        <div id="admin-player-list"></div>
     </div>
 
     <!-- MENU BILANCIO -->
@@ -167,10 +167,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let myToken = localStorage.getItem('pokerTokenV6'); // Cambio token per pulizia
+        let myToken = localStorage.getItem('pokerTokenV7'); 
         if(!myToken) {
             myToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            localStorage.setItem('pokerTokenV6', myToken);
+            localStorage.setItem('pokerTokenV7', myToken);
         }
         let myRoom = null;
         let currentMaxBet = 0;
@@ -193,7 +193,6 @@
             allPlayers = room.players;
             const me = room.players.find(p => p.token === myToken);
             
-            // Reload se sono stato espulso/uscito
             if(!me && document.getElementById('game-screen').classList.contains('hidden') === false) {
                  location.reload(); 
             }
@@ -201,11 +200,10 @@
             if(me) {
                 document.getElementById('display-balance').innerText = me.chips.toFixed(2);
                 myBetInRound = me.betInRound;
-                // Gestione Visibilità Tasto Admin
                 const btn = document.getElementById('admin-btn');
                 if(me.isAdmin) {
                     btn.classList.remove('hidden');
-                    btn.classList.add('admin-active'); // Evidenzia
+                    btn.classList.add('admin-active');
                 } else {
                     btn.classList.add('hidden');
                 }
@@ -231,7 +229,7 @@
             }
 
             room.players.forEach(p => {
-                // Card
+                // Main Grid
                 const el = document.createElement('div');
                 el.className = "player-card " + (p.token === activePlayer?.token ? 'active-turn ' : '') + (p.folded ? 'folded' : '');
                 let dealerHtml = (p.token === room.dealerToken) ? '<div class="dealer-badge">D</div>' : '';
@@ -242,22 +240,28 @@
                 `;
                 grid.appendChild(el);
 
-                // Admin
+                // Admin List with Move Arrows
                 const li = document.createElement('div');
                 li.className = 'list-item';
                 li.innerHTML = `
-                    <span style="color:white; font-size:14px">${p.username}</span>
+                    <div style="display:flex; align-items:center; gap:5px">
+                        <div class="move-arrows">
+                            <button onclick="movePlayer('${p.token}', 'UP')">▲</button>
+                            <button onclick="movePlayer('${p.token}', 'DOWN')">▼</button>
+                        </div>
+                        <span style="color:white; font-size:13px">${p.username}</span>
+                    </div>
                     <div>
-                        <button class="btn" style="background:var(--accent); color:black; font-size:11px; padding:5px 10px; margin-right:5px" onclick="setWinner('${p.token}')">VINCE</button>
-                        <button class="btn" style="background:#444; color:white; padding:5px 10px; font-size:11px" onclick="giveMoney('${p.token}')">+</button>
+                        <button class="btn" style="background:var(--accent); color:black; font-size:10px; padding:5px; margin-right:5px" onclick="setWinner('${p.token}')">WIN</button>
+                        <button class="btn" style="background:#444; color:white; padding:5px; font-size:10px" onclick="giveMoney('${p.token}')">+</button>
                     </div>
                 `;
                 adminList.appendChild(li);
             });
 
+            // Action Bar logic
             const actionBar = document.getElementById('action-bar');
             const btnCheckCall = document.getElementById('btn-check-call');
-
             if(isMyTurn) {
                 actionBar.classList.remove('hidden');
                 const diff = Math.round((currentMaxBet - myBetInRound) * 100) / 100;
@@ -287,7 +291,7 @@
         function leaveGame() {
             if(confirm("Esci e azzeri il conto?")) {
                 socket.emit('leaveGame', { roomCode: myRoom });
-                localStorage.removeItem('pokerTokenV6');
+                localStorage.removeItem('pokerTokenV7');
                 location.reload();
             }
         }
@@ -339,6 +343,9 @@
                 socket.emit('adminAction', { roomCode: myRoom, type: 'RESET' });
                 toggleAdmin();
             }
+        }
+        function movePlayer(token, dir) {
+            socket.emit('adminAction', { roomCode: myRoom, type: 'MOVE_PLAYER', payload: { token, direction: dir }});
         }
     </script>
 </body>
