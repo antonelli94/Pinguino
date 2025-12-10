@@ -3,85 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestore Pinguino</title>
+    <title>Poker Manager</title>
     <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; margin: 0; padding: 10px; }
-        h1, h2, h3 { text-align: center; margin: 5px 0; }
-        .hidden { display: none; }
+        body { background-color: #0f1923; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; text-align: center; }
+        .hidden { display: none !important; }
         
-        /* Login */
-        #login-screen { text-align: center; margin-top: 50px; }
-        input { padding: 10px; font-size: 16px; margin: 5px; width: 80%; border-radius: 5px; border: none; }
-        button { padding: 12px 20px; font-size: 16px; background: #03dac6; border: none; border-radius: 5px; color: #000; font-weight: bold; cursor: pointer; margin: 5px; }
-        button:active { background: #018786; }
+        /* LOGIN */
+        #login-screen { padding-top: 50px; }
+        input { padding: 15px; width: 80%; margin: 10px 0; border-radius: 5px; border: none; font-size: 18px; }
+        .btn-start { background: #ff4655; color: white; border: none; padding: 15px 40px; font-size: 20px; font-weight: bold; border-radius: 5px; cursor: pointer; }
 
-        /* Dashboard */
-        .header-info { display: flex; justify-content: space-between; background: #1f1f1f; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-        .my-money { color: #03dac6; font-size: 1.2em; font-weight: bold; }
-
-        /* Admin Panel */
-        #admin-panel { background: #330000; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ff5555; }
-        .admin-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
-        .admin-btn { background: #ff5555; color: white; font-size: 14px; padding: 8px; }
-
-        /* Players List */
-        #players-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 15px; }
-        .player-badge { background: #333; padding: 5px 10px; border-radius: 15px; font-size: 12px; }
-        .player-badge.is-me { border: 1px solid #03dac6; }
-
-        /* Pots Grid */
-        #pots-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .pot-card { background: #1e1e1e; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #333; position: relative; }
-        .pot-name { font-size: 0.9em; color: #aaa; text-transform: uppercase; }
-        .pot-value { font-size: 1.8em; font-weight: bold; margin: 10px 0; color: #fff; }
-        .pot-actions { display: flex; justify-content: center; gap: 5px; }
-        .btn-bet { background: #bb86fc; font-size: 12px; padding: 8px; }
-        .btn-win { background: #cf6679; font-size: 12px; padding: 8px; }
+        /* TAVOLO GIOCO */
+        .top-bar { display: flex; justify-content: space-between; padding: 15px; background: #1f2731; border-bottom: 2px solid #ff4655; }
+        .my-chips { color: #ffeb3b; font-weight: bold; font-size: 1.2em; }
         
-        /* Special styles for Pinguino Pot */
-        .pot-card.pinguino { grid-column: span 2; background: #2d2d2d; border: 1px solid #03dac6; }
-        .pot-card.pinguino .pot-value { color: #03dac6; font-size: 2.5em; }
+        .pot-display { margin: 20px auto; width: 150px; height: 150px; background: #2c3e50; border-radius: 50%; border: 5px solid #27ae60; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(39, 174, 96, 0.4); }
+        .pot-label { font-size: 14px; color: #aaa; }
+        .pot-amount { font-size: 32px; font-weight: bold; color: #fff; }
 
+        /* GIOCATORI */
+        #players-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 10px; }
+        .player-card { background: #333; padding: 10px; border-radius: 8px; min-width: 100px; position: relative; border: 2px solid transparent; }
+        .player-card.active-turn { border-color: #ff4655; background: #444; box-shadow: 0 0 10px #ff4655; }
+        .player-card.folded { opacity: 0.4; text-decoration: line-through; }
+        .player-chips { color: #ffeb3b; font-size: 0.9em; }
+        .player-bet { color: #27ae60; font-size: 0.8em; }
+
+        /* CONTROLLI AZIONE (Barra in basso) */
+        #action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 15px; display: flex; justify-content: center; gap: 10px; border-top: 1px solid #333; }
+        .btn-game { padding: 15px 20px; font-size: 16px; border: none; border-radius: 5px; font-weight: bold; flex: 1; color: #000; }
+        .btn-fold { background: #e74c3c; color: white; }
+        .btn-check { background: #3498db; color: white; }
+        .btn-call { background: #f1c40f; }
+        .btn-raise { background: #2ecc71; }
+
+        /* ADMIN PANEL */
+        #admin-controls { background: #4a0000; padding: 10px; margin-bottom: 10px; }
+        .admin-btn { background: #ff4655; color: white; border: none; padding: 8px; margin: 2px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
     <!-- LOGIN -->
     <div id="login-screen">
-        <h1>♣️ Pinguino Digital ♦️</h1>
-        <input type="text" id="username" placeholder="Il tuo nome">
-        <input type="text" id="roomCode" placeholder="Nome Stanza (es. tavolonatale)" value="tavolo1">
-        <br>
-        <button onclick="joinGame()">ENTRA</button>
+        <h1>♠️ POKER MANAGER</h1>
+        <input type="text" id="username" placeholder="Tuo Nome (es. Ciccio)">
+        <input type="text" id="roomCode" placeholder="Nome Stanza" value="tavolo1">
+        <br><br>
+        <button class="btn-start" onclick="enterGame()">ENTRA AL TAVOLO</button>
     </div>
 
-    <!-- GIOCO -->
+    <!-- TAVOLO -->
     <div id="game-screen" class="hidden">
         
-        <!-- Info Utente -->
-        <div class="header-info">
-            <span id="display-name">Giocatore</span>
-            <span class="my-money">€ <span id="display-balance">0.00</span></span>
+        <!-- Info Personali -->
+        <div class="top-bar">
+            <span id="my-name">Io</span>
+            <span class="my-chips">€ <span id="my-balance">0</span></span>
         </div>
 
-        <!-- Pannello Admin (Visibile solo all'admin) -->
-        <div id="admin-panel" class="hidden">
-            <h3>👮‍♂️ Banchiere</h3>
-            <div class="admin-controls">
-                <button class="admin-btn" onclick="setupPinguino()">Inizia Pinguino</button>
-                <button class="admin-btn" onclick="distributeAnte()">🔥 MESSA GENERALE (0.10€)</button>
-            </div>
-            <p style="text-align:center; font-size:12px; color:#aaa;">Clicca un nome sotto per dargli soldi</p>
+        <!-- Pannello Admin (Solo per Ciccio/Creator) -->
+        <div id="admin-controls" class="hidden">
+            <p style="margin:0; font-size:12px; color:#aaa">COMANDI BANCHIERE</p>
+            <button class="admin-btn" onclick="startRound()">Nuova Mano (Ante 1€)</button>
+            <p style="font-size:10px;">Clicca su un giocatore per assegnare vittoria o ricaricare</p>
         </div>
 
-        <!-- Lista Giocatori -->
-        <div id="players-list"></div>
+        <!-- PIATTO CENTRALE -->
+        <div class="pot-display">
+            <span class="pot-label">PIATTO</span>
+            <span class="pot-amount">€ <span id="pot-amount">0</span></span>
+            <span style="font-size:12px; color:#aaa; margin-top:5px">Puntata Max: <span id="current-bet">0</span></span>
+        </div>
 
-        <hr style="border-color:#333">
+        <div style="margin-bottom:10px; font-size:14px; color:#ff4655; font-weight:bold" id="turn-indicator">In attesa...</div>
 
-        <!-- I Piatti -->
-        <div id="pots-container">
-            <p style="text-align:center; width:100%; color:#666;">In attesa che l'Admin configuri il gioco...</p>
+        <!-- ALTRI GIOCATORI -->
+        <div id="players-grid"></div>
+
+        <!-- SPAZIO VUOTO PER NON COPRIRE CON LA BARRA -->
+        <div style="height: 80px;"></div>
+
+        <!-- BOTTONI AZIONE (Visibili solo se è il tuo turno) -->
+        <div id="action-bar" class="hidden">
+            <button class="btn-game btn-fold" onclick="doAction('FOLD')">FOLD</button>
+            <button class="btn-game btn-check" id="btn-check-call" onclick="checkOrCall()">CHECK</button>
+            <button class="btn-game btn-raise" onclick="doRaise()">RILANCIA</button>
         </div>
     </div>
 
@@ -90,100 +97,125 @@
         const socket = io();
         let myId = null;
         let myRoom = null;
-        let imAdmin = false;
+        let iamAdmin = false;
+        let currentMaxBet = 0;
+        let myBetInRound = 0;
 
-        function joinGame() {
-            const username = document.getElementById('username').value;
-            const roomCode = document.getElementById('roomCode').value;
-            if(!username || !roomCode) return alert("Inserisci nome e stanza");
-
-            myRoom = roomCode;
-            socket.emit('joinRoom', { username, roomCode });
+        function enterGame() {
+            const user = document.getElementById('username').value;
+            const code = document.getElementById('roomCode').value;
+            if(!user) return alert("Metti il nome!");
+            
+            myRoom = code;
+            socket.emit('joinRoom', { username: user, roomCode: code });
             
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('display-name').innerText = username;
+            document.getElementById('my-name').innerText = user;
         }
 
         socket.on('connect', () => { myId = socket.id; });
 
-        // AGGIORNAMENTO STATO
         socket.on('updateGame', (room) => {
-            // Aggiorna me
+            currentMaxBet = room.currentBet;
+            
             const me = room.players.find(p => p.id === myId);
             if(me) {
-                document.getElementById('display-balance').innerText = me.balance.toFixed(2);
-                imAdmin = me.isAdmin;
-                if(imAdmin) document.getElementById('admin-panel').classList.remove('hidden');
+                document.getElementById('my-balance').innerText = me.chips;
+                myBetInRound = me.betInRound;
+                iamAdmin = me.isAdmin;
+                if(iamAdmin) document.getElementById('admin-controls').classList.remove('hidden');
             }
 
-            // Aggiorna lista giocatori
-            const list = document.getElementById('players-list');
-            list.innerHTML = '';
+            // Aggiorna Piatto
+            document.getElementById('pot-amount').innerText = room.pot;
+            document.getElementById('current-bet').innerText = room.currentBet;
+
+            // Aggiorna Giocatori
+            const grid = document.getElementById('players-grid');
+            grid.innerHTML = '';
+            
+            // Gestione Turno
+            const activePlayer = room.players[room.turnIndex];
+            const isMyTurn = (activePlayer && activePlayer.id === myId && room.phase === 'BETTING');
+            
+            if(activePlayer) {
+                document.getElementById('turn-indicator').innerText = 
+                    isMyTurn ? "TOCCA A TE! Scegli azione:" : `Tocca a ${activePlayer.username}...`;
+            }
+
             room.players.forEach(p => {
                 const div = document.createElement('div');
-                div.className = 'player-badge' + (p.id === myId ? ' is-me' : '');
-                div.innerHTML = `<b>${p.username}</b>: €${p.balance.toFixed(2)}`;
+                div.className = `player-card ${p.id === activePlayer?.id ? 'active-turn' : ''} ${p.folded ? 'folded' : ''}`;
+                div.innerHTML = `
+                    <div style="font-weight:bold">${p.username}</div>
+                    <div class="player-chips">€ ${p.chips}</div>
+                    <div class="player-bet">Puntato: ${p.betInRound}</div>
+                `;
                 
-                // Admin click per ricaricare
-                if(imAdmin) {
+                // Admin Actions (Assegna vittoria / Ricarica)
+                if(iamAdmin) {
+                    div.onclick = () => adminMenu(p);
                     div.style.cursor = "pointer";
-                    div.onclick = () => adminAddMoney(p.id, p.username);
                 }
-                list.appendChild(div);
+                grid.appendChild(div);
             });
 
-            // Aggiorna Piatti
-            const potsContainer = document.getElementById('pots-container');
-            potsContainer.innerHTML = '';
-            
-            room.pots.forEach(pot => {
-                const isPinguino = pot.name === 'PINGUINO';
-                const div = document.createElement('div');
-                div.className = 'pot-card' + (isPinguino ? ' pinguino' : '');
-                div.innerHTML = `
-                    <div class="pot-name">${pot.name}</div>
-                    <div class="pot-value">€ ${pot.value.toFixed(2)}</div>
-                    <div class="pot-actions">
-                        <button class="btn-bet" onclick="bet('${pot.id}')">Punta 0.10</button>
-                        <button class="btn-win" onclick="collect('${pot.id}')">VINCI</button>
-                    </div>
-                `;
-                potsContainer.appendChild(div);
-            });
+            // Gestione Pulsantiera
+            const actionBar = document.getElementById('action-bar');
+            const btnCheckCall = document.getElementById('btn-check-call');
+
+            if(isMyTurn) {
+                actionBar.classList.remove('hidden');
+                
+                // Logica Check vs Call
+                const diff = currentMaxBet - myBetInRound;
+                if(diff > 0) {
+                    btnCheckCall.innerText = `VEDO (${diff})`;
+                    btnCheckCall.className = 'btn-game btn-call';
+                    btnCheckCall.onclick = () => doAction('CALL');
+                } else {
+                    btnCheckCall.innerText = 'CHECK';
+                    btnCheckCall.className = 'btn-game btn-check';
+                    btnCheckCall.onclick = () => doAction('CHECK');
+                }
+            } else {
+                actionBar.classList.add('hidden');
+            }
         });
 
-        // AZIONI UTENTE
-        function bet(potId) {
-            socket.emit('bet', { roomCode: myRoom, potId: potId, amount: 0.10 });
+        // ACTIONS UTENTE
+        function doAction(type) {
+            socket.emit('playerAction', { roomCode: myRoom, action: type });
         }
+        
+        function checkOrCall() { /* Gestito dinamicamente sopra */ }
 
-        function collect(potId) {
-            if(confirm("Hai davvero vinto questo piatto?")) {
-                socket.emit('collect', { roomCode: myRoom, potId: potId });
+        function doRaise() {
+            const raiseTo = prompt(`Il banco è ${currentMaxBet}. A quanto vuoi portare la puntata totale? (Es. 5)`);
+            if(raiseTo && parseInt(raiseTo) > currentMaxBet) {
+                socket.emit('playerAction', { roomCode: myRoom, action: 'RAISE', amount: raiseTo });
+            } else {
+                alert("Devi rilanciare una cifra superiore all'attuale!");
             }
         }
 
-        // AZIONI ADMIN
-        function setupPinguino() {
-            socket.emit('setupGame', { roomCode: myRoom, type: 'PINGUINO' });
+        // ACTIONS ADMIN
+        function startRound() {
+            const ante = prompt("Costo invito (Ante) per questa mano? (Es. 1)", "1");
+            if(ante) socket.emit('startRound', { roomCode: myRoom, anteAmount: parseInt(ante) });
         }
 
-        function adminAddMoney(targetId, name) {
-            const amount = prompt(`Quanti soldi veri vuoi caricare a ${name}?`);
-            if(amount && !isNaN(amount)) {
-                socket.emit('addFunds', { roomCode: myRoom, targetId: targetId, amount: amount });
+        function adminMenu(player) {
+            if(!confirm(`Gestione ${player.username}.\nOK = Assegna Vittoria (Incassa Piatto)\nANNULLA = Ricarica Conto`)) {
+                // Ricarica
+                const amount = prompt("Quanto vuoi ricaricare?");
+                if(amount) socket.emit('addChips', { roomCode: myRoom, targetId: player.id, amount: amount });
+            } else {
+                // Vittoria
+                socket.emit('winner', { roomCode: myRoom, winnerId: player.id });
             }
         }
-
-        function distributeAnte() {
-            // Nel Pinguino, di solito si mette una quota su ogni carta
-            // Qui facciamo 0.10 per ogni piatto
-            if(confirm("Togli 0.10€ x NUMERO PIATTI a tutti i giocatori?")) {
-                socket.emit('distributeAnte', { roomCode: myRoom, amountPerPot: 0.10 });
-            }
-        }
-
     </script>
 </body>
 </html>
