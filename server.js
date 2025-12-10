@@ -11,6 +11,7 @@ const round = (num) => Math.round(num * 100) / 100;
 
 io.on('connection', (socket) => {
     
+    // JOIN
     socket.on('joinGame', ({ username, roomCode, token }) => {
         socket.join(roomCode);
         
@@ -43,7 +44,7 @@ io.on('connection', (socket) => {
             room.players.push(player);
         }
         
-        // Gestione Admin se vuoto
+        // Assegna Admin se manca
         const adminExists = room.players.some(p => p.token === room.adminToken);
         if(!adminExists || room.players.length === 1) {
             room.adminToken = token;
@@ -53,9 +54,10 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('updateGame', room);
     });
 
+    // PLAYER ACTIONS
     socket.on('playerAction', ({ roomCode, action, amount }) => {
         const room = rooms[roomCode];
-        if(!room) return;
+        if(!room) return; // PROTEZIONE CRASH
         
         const player = room.players.find(p => p.socketId === socket.id);
         if(!player || room.players.indexOf(player) !== room.turnIndex) return;
@@ -80,13 +82,12 @@ io.on('connection', (socket) => {
         else if (action === 'RAISE') {
             const raiseTo = parseFloat(amount);
             
-            // 1. Controllo soldi miei
             const diff = round(raiseTo - player.betInRound);
             if(player.chips < diff) {
                 return io.to(roomCode).emit('toast', `Non hai abbastanza fiches!`);
             }
 
-            // 2. Controllo Stack Effettivo (Cap)
+            // Cap Stack Effettivo
             let minStackLimit = 999999;
             let limitingPlayerName = "";
             room.players.forEach(p => {
@@ -125,9 +126,10 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('updateGame', room);
     });
 
+    // USCITA
     socket.on('leaveGame', ({ roomCode }) => {
         const room = rooms[roomCode];
-        if(!room) return;
+        if(!room) return; // PROTEZIONE CRASH
 
         const pIndex = room.players.findIndex(p => p.socketId === socket.id);
         if(pIndex !== -1) {
@@ -137,6 +139,7 @@ io.on('connection', (socket) => {
             
             room.players.splice(pIndex, 1);
             
+            // Nuovo Admin
             if(wasAdmin && room.players.length > 0) {
                 room.players[0].isAdmin = true;
                 room.adminToken = room.players[0].token;
@@ -149,29 +152,27 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ADMIN ACTIONS (CICCIO)
     socket.on('adminAction', ({ roomCode, type, payload }) => {
         const room = rooms[roomCode];
+        if(!room) return; // PROTEZIONE CRASH FONDAMENTALE (Fix Error 2)
+
         const caller = room.players.find(p => p.socketId === socket.id);
-        if(!room || !caller || !caller.isAdmin) return;
+        if(!caller || !caller.isAdmin) return;
 
         if(type === 'START_ROUND') {
             const ante = parseFloat(payload.ante);
             room.pot = 0; room.currentBet = 0; room.phase = 'BETTING'; 
             
-            // --- ROTAZIONE MAZZIERE AUTOMATICA ---
+            // --- ROTAZIONE MAZZIERE (FIX ERROR 1) ---
             if(room.players.length > 0) {
-                // Cerchiamo dove è seduto il vecchio mazziere
-                let currentDealerIndex = room.players.findIndex(p => p.token === room.dealerToken);
+                let currentIdx = room.players.findIndex(p => p.token === room.dealerToken);
                 
-                // Se non c'era o è uscito, iniziamo dal primo
-                if(currentDealerIndex === -1) currentDealerIndex = -1;
+                // Calcolo semplice senza variabili temporanee rischiose
+                let nextIdx = (currentIdx + 1) % room.players.length;
                 
-                // Il bottone passa al PROSSIMO nella lista (Senso Orario)
-                let nextDealerIndex = (currentDealerIndex + 1) % room.players.length;
-                room.dealerToken = room.players[nextDealerIdx].token;
-                
-                // Chi inizia a parlare? Quello SEDUTO DOPO il nuovo Mazziere
-                room.turnIndex = (nextDealerIdx + 1) % room.players.length;
+                room.dealerToken = room.players[nextIdx].token;
+                room.turnIndex = (nextIdx + 1) % room.players.length;
             }
 
             // Preleva Ante
@@ -185,17 +186,14 @@ io.on('connection', (socket) => {
             io.to(roomCode).emit('toast', `Mano iniziata! Ante: ${ante.toFixed(2)}€`);
         }
         else if(type === 'MOVE_PLAYER') {
-            // Sposta i giocatori nella lista per riflettere il tavolo reale
             const { token, direction } = payload;
             const index = room.players.findIndex(p => p.token === token);
-            if(index === -1) return;
-
-            if(direction === 'UP' && index > 0) {
-                // Scambia con quello prima
-                [room.players[index], room.players[index-1]] = [room.players[index-1], room.players[index]];
-            } else if (direction === 'DOWN' && index < room.players.length - 1) {
-                // Scambia con quello dopo
-                [room.players[index], room.players[index+1]] = [room.players[index+1], room.players[index]];
+            if(index !== -1) {
+                if(direction === 'UP' && index > 0) {
+                    [room.players[index], room.players[index-1]] = [room.players[index-1], room.players[index]];
+                } else if (direction === 'DOWN' && index < room.players.length - 1) {
+                    [room.players[index], room.players[index+1]] = [room.players[index+1], room.players[index]];
+                }
             }
         }
         else if(type === 'WINNER') {
