@@ -7,8 +7,6 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = {};
-
-// Funzione arrotondamento
 const round = (num) => Math.round(num * 100) / 100;
 
 io.on('connection', (socket) => {
@@ -19,7 +17,7 @@ io.on('connection', (socket) => {
         if (!rooms[roomCode]) {
             rooms[roomCode] = { 
                 players: [], pot: 0, currentBet: 0, turnIndex: 0, phase: 'WAITING', 
-                adminToken: token, 
+                adminToken: token, // Il primo che crea è Admin
                 dealerToken: null
             };
         }
@@ -30,22 +28,28 @@ io.on('connection', (socket) => {
         if(player) {
             player.socketId = socket.id;
             player.username = username;
-            // Se mancava il campo buyInTotal (vecchi utenti), lo setto a 0 o alle chips attuali approssimativamente
-            if(player.buyInTotal === undefined) player.buyInTotal = 0; 
+            if(player.buyInTotal === undefined) player.buyInTotal = 0;
         } else {
             player = {
                 token: token,
                 socketId: socket.id,
                 username: username,
                 chips: 0,
-                buyInTotal: 0, // Quanto ha speso in soldi veri
+                buyInTotal: 0,
                 betInRound: 0,
                 folded: false,
-                isAdmin: token === room.adminToken
+                isAdmin: false // Lo calcoliamo dopo
             };
             room.players.push(player);
         }
+        
+        // Assegna Admin: Se il token corrisponde O se non c'è nessun admin attivo
+        const adminExists = room.players.some(p => p.token === room.adminToken);
+        if(!adminExists || room.players.length === 1) {
+            room.adminToken = token; // Diventi admin se eri solo o il vecchio è uscito
+        }
         player.isAdmin = (token === room.adminToken);
+
         io.to(roomCode).emit('updateGame', room);
     });
 
@@ -75,9 +79,36 @@ io.on('connection', (socket) => {
         }
         else if (action === 'RAISE') {
             const raiseTo = parseFloat(amount);
-            const diff = round(raiseTo - player.betInRound);
             
-            if(raiseTo > room.currentBet && player.chips >= diff) {
+            // 1. Controllo: Ho abbastanza soldi io?
+            const diff = round(raiseTo - player.betInRound);
+            if(player.chips < diff) {
+                return io.to(roomCode).emit('toast', `Non hai abbastanza fiches!`);
+            }
+
+            // 2. Controllo: Gli ALTRI hanno abbastanza soldi? (Effective Stack)
+            // Non puoi puntare cifre che gli altri non possono coprire
+            let minStackLimit = 999999;
+            let limitingPlayerName = "";
+
+            room.players.forEach(p => {
+                if(!p.folded && p.token !== player.token) {
+                    // Il massimo che questo giocatore può mettere nel piatto in totale
+                    const pMaxPotential = round(p.chips + p.betInRound);
+                    if(pMaxPotential < minStackLimit) {
+                        minStackLimit = pMaxPotential;
+                        limitingPlayerName = p.username;
+                    }
+                }
+            });
+
+            // Se siamo heads-up o multiway, il limite è dettato dal più povero
+            if(raiseTo > minStackLimit) {
+                return io.to(roomCode).emit('toast', `Limite ${minStackLimit}€ (Stack di ${limitingPlayerName})`);
+            }
+
+            // Se passa i controlli, esegui
+            if(raiseTo > room.currentBet) {
                 player.chips = round(player.chips - diff); 
                 player.betInRound = round(player.betInRound + diff); 
                 room.pot = round(room.pot + diff); 
@@ -103,16 +134,27 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         if(!room) return;
 
-        // Trova giocatore
         const pIndex = room.players.findIndex(p => p.socketId === socket.id);
         if(pIndex !== -1) {
-            const pName = room.players[pIndex].username;
-            room.players.splice(pIndex, 1); // Rimuovi dalla lista
+            const player = room.players[pIndex];
+            const wasAdmin = player.isAdmin;
+            const pName = player.username;
             
+            // Rimuovi giocatore
+            room.players.splice(pIndex, 1);
+            
+            // LOGICA EREDITÀ ADMIN
+            // Se l'admin esce e c'è ancora gente, il primo della lista diventa Admin
+            if(wasAdmin && room.players.length > 0) {
+                room.players[0].isAdmin = true;
+                room.adminToken = room.players[0].token;
+                io.to(roomCode).emit('toast', `👑 ${room.players[0].username} è il nuovo Banchiere!`);
+            }
+
             // Gestione crash se era il suo turno
             if(room.turnIndex >= room.players.length) room.turnIndex = 0;
             
-            io.to(roomCode).emit('toast', `👋 ${pName} è uscito dal tavolo.`);
+            io.to(roomCode).emit('toast', `👋 ${pName} è uscito.`);
             io.to(roomCode).emit('updateGame', room);
         }
     });
@@ -126,11 +168,12 @@ io.on('connection', (socket) => {
             const ante = parseFloat(payload.ante);
             room.pot = 0; room.currentBet = 0; room.phase = 'BETTING'; 
             
-            // Mazziere
-            const currentDealerIdx = room.players.findIndex(p => p.token === room.dealerToken);
-            let nextDealerIdx = (currentDealerIdx + 1) % room.players.length;
-            if(currentDealerIdx === -1) nextDealerIdx = 0;
+            // Rotazione Mazziere
             if(room.players.length > 0) {
+                const currentDealerIdx = room.players.findIndex(p => p.token === room.dealerToken);
+                let nextDealerIdx = (currentDealerIdx + 1) % room.players.length;
+                if(currentDealerIdx === -1) nextDealerIdx = 0;
+                
                 room.dealerToken = room.players[nextDealerIdx].token;
                 room.turnIndex = (nextDealerIdx + 1) % room.players.length;
             }
@@ -158,8 +201,6 @@ io.on('connection', (socket) => {
             if(p) {
                 const val = parseFloat(payload.amount);
                 p.chips = round(p.chips + val);
-                // IMPORTANTE: Se aggiungiamo chips (soldi veri), aumenta il BuyInTotal
-                // Se è negativo (correzione errore), non lo contiamo come buyin
                 if(val > 0) p.buyInTotal = round(p.buyInTotal + val);
             }
         }
@@ -184,4 +225,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log('Server pronto'));
+http.listen(PORT, () => console.log('Server attivo'));
