@@ -6,146 +6,156 @@ const path = require('path');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// STRUTTURA DATI (In memoria)
-// rooms = { 'codiceStanza': { players: [], pots: [], adminId: '...' } }
+// STRUTTURA DATI
+// rooms[code] = { 
+//   players: [], 
+//   pot: 0, 
+//   currentBet: 0, 
+//   turnIndex: 0, 
+//   phase: 'WAITING', // WAITING, BETTING
+//   adminId: '...' 
+// }
 const rooms = {};
 
 io.on('connection', (socket) => {
     
-    // 1. UNISCITI ALLA STANZA
+    // ENTRA / CREA
     socket.on('joinRoom', ({ username, roomCode }) => {
         socket.join(roomCode);
         
         if (!rooms[roomCode]) {
-            // Crea stanza se non esiste
             rooms[roomCode] = { 
                 players: [], 
-                pots: [], // I piatti sul tavolo
+                pot: 0, 
+                currentBet: 0,
+                turnIndex: 0,
+                phase: 'WAITING',
                 adminId: socket.id 
             };
         }
-
         const room = rooms[roomCode];
         
-        // Aggiungi giocatore
-        const newPlayer = {
-            id: socket.id,
-            username: username,
-            balance: 0, // Saldo iniziale
-            isAdmin: socket.id === room.adminId
-        };
-        room.players.push(newPlayer);
-
-        // Notifica tutti
-        io.to(roomCode).emit('updateGame', room);
-    });
-
-    // 2. CONFIGURAZIONE GIOCO (Solo Admin)
-    socket.on('setupGame', ({ roomCode, type }) => {
-        const room = rooms[roomCode];
-        if (!room || room.adminId !== socket.id) return;
-
-        if (type === 'PINGUINO') {
-            // Crea i piatti classici del Pinguino
-            room.pots = [
-                { id: 'p_asso', name: 'ASSO', value: 0 },
-                { id: 'p_re', name: 'RE', value: 0 },
-                { id: 'p_j', name: 'FANTE (J)', value: 0 },
-                { id: 'p_10', name: 'DIECI', value: 0 },
-                { id: 'p_2', name: 'DUE', value: 0 },
-                { id: 'p_matta', name: 'MATTA (7)', value: 0 },
-                { id: 'p_pinguino', name: 'PINGUINO', value: 0 }, // Piatto grosso
-            ];
-        } else if (type === 'CUCU') {
-            room.pots = [
-                { id: 'p_main', name: 'PIATTO UNICO', value: 0 }
-            ];
+        // Evita duplicati se uno ricarica la pagina
+        const existingPlayer = room.players.find(p => p.username === username);
+        if(!existingPlayer) {
+            room.players.push({
+                id: socket.id,
+                username: username,
+                chips: 0,         // Soldi totali
+                betInRound: 0,    // Soldi messi in questo giro
+                folded: false,    // Ha passato?
+                isAdmin: socket.id === room.adminId
+            });
+        } else {
+            // Riconnessione veloce
+            existingPlayer.id = socket.id;
+            if(existingPlayer.isAdmin) room.adminId = socket.id;
         }
+
         io.to(roomCode).emit('updateGame', room);
     });
 
-    // 3. RICARICA CREDITI (Admin -> Player)
-    socket.on('addFunds', ({ roomCode, targetId, amount }) => {
+    // ADMIN: RICARICA CONTO (Distribuzione soldi)
+    socket.on('addChips', ({ roomCode, targetId, amount }) => {
         const room = rooms[roomCode];
-        if (!room || room.adminId !== socket.id) return;
-        
-        const player = room.players.find(p => p.id === targetId);
-        if (player) {
-            player.balance += parseFloat(amount);
+        if(!room || room.adminId !== socket.id) return;
+
+        const p = room.players.find(pl => pl.id === targetId);
+        if(p) {
+            p.chips += parseInt(amount);
             io.to(roomCode).emit('updateGame', room);
         }
     });
 
-    // 4. DISTRIBUISCI MESSA (Tutti pagano -> Tutti i piatti ricevono)
-    // Tipico del Pinguino: ognuno mette X su ogni carta
-    socket.on('distributeAnte', ({ roomCode, amountPerPot }) => {
+    // ADMIN: INIZIA NUOVA MANO (Prende l'Ante)
+    socket.on('startRound', ({ roomCode, anteAmount }) => {
         const room = rooms[roomCode];
-        if (!room || room.adminId !== socket.id) return;
+        if(!room || room.adminId !== socket.id) return;
 
-        const totalCost = amountPerPot * room.pots.length;
-
+        room.pot = 0;
+        room.currentBet = 0;
+        room.phase = 'BETTING';
+        room.turnIndex = 0; // Inizia il primo della lista
+        
+        // Reset giocatori e prelievo Ante
         room.players.forEach(p => {
-            if (p.balance >= totalCost) {
-                p.balance -= totalCost;
-                p.balance = Math.round(p.balance * 100) / 100;
+            p.folded = false;
+            p.betInRound = 0;
+            if(p.chips >= anteAmount) {
+                p.chips -= anteAmount;
+                room.pot += anteAmount;
             }
         });
 
-        // Aggiungi ai piatti
-        const totalPlayers = room.players.length;
-        room.pots.forEach(pot => {
-            pot.value += (amountPerPot * totalPlayers);
-            pot.value = Math.round(pot.value * 100) / 100;
-        });
+        io.to(roomCode).emit('updateGame', room);
+    });
+
+    // GIOCATORE: AZIONE DI GIOCO
+    socket.on('playerAction', ({ roomCode, action, amount }) => {
+        const room = rooms[roomCode];
+        if(!room) return;
+
+        const player = room.players.find(p => p.id === socket.id);
+        const playerIndex = room.players.findIndex(p => p.id === socket.id);
+
+        // Controllo se è il suo turno
+        if(playerIndex !== room.turnIndex) return; 
+
+        if (action === 'FOLD') {
+            player.folded = true;
+        } 
+        else if (action === 'CHECK') {
+            // Puoi fare check solo se la tua puntata è uguale alla puntata attuale
+            if(player.betInRound < room.currentBet) return; // Errore
+        }
+        else if (action === 'CALL') {
+            const toCall = room.currentBet - player.betInRound;
+            if(player.chips >= toCall) {
+                player.chips -= toCall;
+                player.betInRound += toCall;
+                room.pot += toCall;
+            }
+        }
+        else if (action === 'RAISE') {
+            // Amount è il TOTALE a cui voglio arrivare (es. rilancio a 10)
+            const raiseTo = parseInt(amount);
+            const diff = raiseTo - player.betInRound;
+            
+            if(raiseTo > room.currentBet && player.chips >= diff) {
+                player.chips -= diff;
+                player.betInRound += diff;
+                room.pot += diff;
+                room.currentBet = raiseTo; // Alzo l'asticella per tutti
+            }
+        }
+
+        // Passa il turno al prossimo che non ha foldato
+        let nextIndex = (room.turnIndex + 1) % room.players.length;
+        let loops = 0;
+        while(room.players[nextIndex].folded && loops < room.players.length) {
+            nextIndex = (nextIndex + 1) % room.players.length;
+            loops++;
+        }
+        room.turnIndex = nextIndex;
 
         io.to(roomCode).emit('updateGame', room);
     });
 
-    // 5. PUNTA SU UN PIATTO (Giocatore -> Piatto)
-    socket.on('bet', ({ roomCode, potId, amount }) => {
+    // ADMIN: ASSEGNA VITTORIA (Chiude la mano)
+    socket.on('winner', ({ roomCode, winnerId }) => {
         const room = rooms[roomCode];
-        if (!room) return;
-        
-        const player = room.players.find(p => p.id === socket.id);
-        const pot = room.pots.find(p => p.id === potId);
+        if(!room || room.adminId !== socket.id) return;
 
-        if (player && pot && player.balance >= amount) {
-            player.balance -= amount;
-            pot.value += amount;
-            
-            // Arrotondamenti per evitare 0.300000004
-            player.balance = Math.round(player.balance * 100) / 100;
-            pot.value = Math.round(pot.value * 100) / 100;
-
+        const winner = room.players.find(p => p.id === winnerId);
+        if(winner) {
+            winner.chips += room.pot;
+            room.pot = 0;
+            room.currentBet = 0;
+            room.phase = 'WAITING'; // Pausa in attesa della prossima mano
             io.to(roomCode).emit('updateGame', room);
         }
-    });
-
-    // 6. INCASSA PIATTO (Piatto -> Giocatore)
-    socket.on('collect', ({ roomCode, potId }) => {
-        const room = rooms[roomCode];
-        if (!room) return;
-        
-        const player = room.players.find(p => p.id === socket.id);
-        const pot = room.pots.find(p => p.id === potId);
-
-        if (player && pot && pot.value > 0) {
-            player.balance += pot.value;
-            pot.value = 0;
-            
-            player.balance = Math.round(player.balance * 100) / 100;
-            io.to(roomCode).emit('updateGame', room);
-        }
-    });
-
-    // Gestione disconnessione (opzionale: rimuovere player)
-    socket.on('disconnect', () => {
-        // Per ora lasciamo lo stato così com'è per evitare di perdere i soldi se cade la linea
-        console.log('User disconnected', socket.id);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+http.listen(PORT, () => { console.log('Server attivo'); });
